@@ -1,0 +1,5 @@
+streamlit
+langfuse
+requests
+python-dotenv
+fpdf2
