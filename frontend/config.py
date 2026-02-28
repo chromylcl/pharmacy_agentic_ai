@@ -22,12 +22,7 @@ RESTRICTED_DRUGS = [
     "fentanyl", "ritalin", "klonopin"
 ]
 
-# Nutrition keywords — activates 4th agent block
-NUTRITION_KEYWORDS = [
-    "protein", "creatine", "supplement", "muscle",
-    "workout", "whey", "pre-workout", "bcaa",
-    "mass gainer", "fat burner", "vitamins"
-]
+
 
 # Quick action prompts [emoji, label, full prompt sent to backend]
 QUICK_ACTION_PROMPTS = [
