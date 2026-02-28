@@ -16,6 +16,7 @@ import os
 import time
 import requests
 from dotenv import load_dotenv
+from requests.auth import HTTPBasicAuth # ← Add this if it's missing
 
 load_dotenv()
 
@@ -271,6 +272,105 @@ def call_refill_check(patient_id: str, medication: str) -> dict:
         "days_remaining": 12,
     }
 
+def call_inventory() -> list:
+    # This expects the backend to return: {"products": [ {name, price, stock, category, restricted}, ... ]}
+    try:
+        res = requests.get(f"{BACKEND_URL}/inventory", timeout=TIMEOUT)
+        res.raise_for_status()
+        return res.json().get("products", [])
+    except Exception as e:
+        # If backend is down, return empty list so the app doesn't crash during the demo
+        return []
+    
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 💳 PAYPAL PAYMENT GATEWAY (SANDBOX)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ... (after call_inventory)
+
+import requests
+import requests.auth
+import os
+
+# Ensure these match your .env exactly
+PP_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID")
+PP_SECRET = os.getenv("PAYPAL_SECRET")
+
+def get_paypal_token():
+    url = "https://api-m.sandbox.paypal.com/v1/oauth2/token"
+    data = {"grant_type": "client_credentials"}
+    try:
+        # Use requests.auth.HTTPBasicAuth to fix the yellow line warning
+        res = requests.post(
+            url, 
+            data=data, 
+            auth=requests.auth.HTTPBasicAuth(PP_CLIENT_ID, PP_SECRET), 
+            timeout=10
+        )
+        res.raise_for_status()
+        return res.json().get("access_token")
+    except Exception as e:
+        print(f"PayPal Auth Error: {e}")
+        return None
+
+def call_create_payment_link(amount_usd: float, patient_name: str) -> str:
+    token = get_paypal_token()
+    if not token:
+        return "https://www.paypal.com/checkoutnow"
+
+    url = "https://api-m.sandbox.paypal.com/v2/checkout/orders"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {token}"
+    }
+    
+    # 🧪 FIX: PayPal requires amount as a string with exactly 2 decimal places
+    formatted_amount = "{:.2f}".format(amount_usd)
+
+    payload = {
+        "intent": "CAPTURE",
+        "purchase_units": [{
+            "amount": {
+                "currency_code": "USD", 
+                "value": formatted_amount
+            }
+        }],
+        "application_context": {
+            "brand_name": "AI Pharmacy Assistant",
+            "return_url": "http://localhost:8501", 
+            "cancel_url": "http://localhost:8501",
+            "user_action": "PAY_NOW"
+        }
+    }
+
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        # If this fails, it will print the exact reason in your terminal
+        if response.status_code != 201:
+            print(f"PayPal Order Error: {response.text}")
+            
+        data = response.json()
+        for link in data.get("links", []):
+            if link["rel"] == "approve":
+                return link["href"]
+    except Exception as e:
+        print(f"Request Exception: {e}")
+    
+    return "https://www.paypal.com/checkoutnow"
+    
+
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        for link in data.get("links", []):
+            if link["rel"] == "approve":
+                return link["href"]
+    except Exception as e:
+        print(f"PayPal Order Error: {e}")
+    
+    return "https://www.paypal.com/checkoutnow"
 
 # ══════════════════════════════════════════════════════════════════════════════
 # 🛡️ ERROR HANDLER — wraps any api call safely
