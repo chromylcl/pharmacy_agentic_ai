@@ -6,11 +6,24 @@ def init_session():
     """Initializes all global state variables exactly once per session."""
     
     # 1. User & UI State
-    if "patient_name" not in st.session_state:
-        st.session_state.patient_name = "Guest Patient" # Easily swapped if you add mock auth
+    
         
     if "ui_phase" not in st.session_state:
-        st.session_state.ui_phase = "chatting"
+        st.session_state.ui_phase = "onboarding"
+
+    if "patient_name" not in st.session_state:
+        st.session_state.patient_name = "Guest"
+
+    if "patient_age" not in st.session_state:
+        st.session_state.patient_age = None              # ← ADD THIS LINE
+
+    if "cart" not in st.session_state:
+        st.session_state.cart = []   
+        
+    if "payment_link" not in st.session_state:
+        st.session_state.payment_link = None                    # ← ADD THIS LINE (needed for storefront later)
+
+
         
     if "is_first_message" not in st.session_state:
         st.session_state.is_first_message = True
