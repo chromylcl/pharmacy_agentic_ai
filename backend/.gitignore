@@ -1,0 +1,19 @@
+# Environments and Secrets
+backend/.env
+.env
+.venv/
+env/
+venv/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Audio and Media
+*.wav
+temp_audio.wav
+
+# OS files
+.DS_Store
+Thumbs.db
