@@ -104,6 +104,12 @@ def render_quick_actions() -> str | None:
                     use_container_width=True,
                     key=f"quick_action_{label}",  # unique key per button using the label
                 ):
+                    # 🚨 1. CHECK THE LABEL INSTEAD OF THE PROMPT STRING
+                    if label == "Browse Pharmacy":
+                        st.session_state.ui_phase = "storefront"
+                        st.rerun()
+                    
+                    # 💬 2. OTHERWISE, SET THE CLICKED PROMPT
                     clicked_prompt = full_prompt
 
     # ── Divider before chat input ─────────────────────────────────────────────

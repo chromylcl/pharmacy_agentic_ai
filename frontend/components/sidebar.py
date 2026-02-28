@@ -2,7 +2,7 @@
 components/sidebar.py
 ----------------------
 Renders the left sidebar with:
-    - Atharva branding
+    
     - Patient name input
     - Session info (trace ID, message count)
     - Agent legend
@@ -37,7 +37,7 @@ def _render_branding():
                 font-weight: 700;
                 color: #ffffff;
                 letter-spacing: 0.04em;
-            ">Atharva</div>
+            ">AI Pharmacy</div>
             <div style="
                 font-size: 0.72rem;
                 color: #6B7280;
@@ -139,6 +139,8 @@ def _render_session_info():
     )
 
 
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # 🤖 AGENT LEGEND
 # ══════════════════════════════════════════════════════════════════════════════
@@ -181,6 +183,21 @@ def _render_agent_legend():
         )
 
 
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 🛒 STOREFRONT
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _render_storefront_button():
+    st.markdown("<div style='margin-top: 24px;'></div>", unsafe_allow_html=True)
+    
+    if st.button("🛒 Open Storefront", use_container_width=True, type="primary"):
+        st.session_state.ui_phase = "storefront"
+        st.rerun()
+
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # 🔄 RESET BUTTON
 # ══════════════════════════════════════════════════════════════════════════════
@@ -207,7 +224,7 @@ def _render_reset_button():
         st.session_state.messages              = [
             {
                 "role":    "assistant",
-                "content": "👋 Hello! I'm Atharva, your AI pharmacy assistant. How can I help you today?",
+                "content": "👋 Hello! I'm AI Pharmacy Assistant, your AI pharmacy assistant. How can I help you today?",
             }
         ]
         st.session_state.pending_prescription  = None
@@ -237,6 +254,10 @@ def render_sidebar():
         _render_session_info()
         st.divider()
         _render_agent_legend()
+        
+        # ADDED: Storefront button right below the agents legend
+        _render_storefront_button()
+        
         st.divider()
         _render_reset_button()
 

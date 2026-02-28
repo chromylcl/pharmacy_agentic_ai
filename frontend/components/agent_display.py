@@ -53,23 +53,34 @@ def _dummy_fulfillment(user_input: str) -> str:
 # 🔌 API CALL WRAPPERS — Swap dummy_* with real calls here ONLY
 # ══════════════════════════════════════════════════════════════════════════════
 
+def _enrich_input(user_input: str) -> str:
+    """Prepend patient context so agents give age-aware responses."""
+    age  = st.session_state.get("patient_age")
+    name = st.session_state.get("patient_name", "Patient")
+    if age is not None:
+        return f"[Patient: {name}, Age: {age}] {user_input}"
+    return user_input
+    # SWAP THIS — currently just prepends a string to the query
+    # When backend supports patient profiles:
+    #   return user_input  (and pass patient_id as a separate param instead)
+
 def _call_pharmacist(user_input: str) -> str:
-    return _dummy_pharmacist(user_input)
+    return _dummy_pharmacist(_enrich_input(user_input))
     # 🔌 SWAP THIS — when backend is ready, replace above line with:
     # from services.api_client import call_pharmacist
-    # return call_pharmacist(user_input)
+    # return call_pharmacist(_enrich_input(user_input))
 
 def _call_safety(user_input: str) -> str:
-    return _dummy_safety(user_input)
+    return _dummy_safety(_enrich_input(user_input))
     # 🔌 SWAP THIS — when backend is ready, replace above line with:
     # from services.api_client import call_safety
-    # return call_safety(user_input)
+    # return call_safety(_enrich_input(user_input))
 
 def _call_fulfillment(user_input: str) -> str:
-    return _dummy_fulfillment(user_input)
+    return _dummy_fulfillment(_enrich_input(user_input))
     # 🔌 SWAP THIS — when backend is ready, replace above line with:
     # from services.api_client import call_fulfillment
-    # return call_fulfillment(user_input)
+    # return call_fulfillment(_enrich_input(user_input))
 
 
 # ══════════════════════════════════════════════════════════════════════════════

@@ -149,7 +149,9 @@ def _generate_pdf(
         pdf.set_font("Helvetica", "", 9)
         pdf.set_text_color(60, 60, 60)
         for i, msg in enumerate(user_messages, 1):
-            pdf.multi_cell(0, 5, f"{i}. {msg.get('content', '')}")
+            # ✅ Replace with this:
+            clean_content = _sanitize_for_pdf(msg.get('content', ''))
+            pdf.multi_cell(0, 5, f"{i}. {clean_content}")
             pdf.ln(1)
 
     # ── Footer ────────────────────────────────────────────────────────────────
