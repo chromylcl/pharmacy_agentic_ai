@@ -1,5 +1,6 @@
 streamlit
-langfuse
 requests
 python-dotenv
 fpdf2
+langfuse==2.60.0
+# only works with python 3.12 
