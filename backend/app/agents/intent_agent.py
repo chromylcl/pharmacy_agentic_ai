@@ -38,23 +38,27 @@ Intent rules:
    - severe bleeding
    -> intent = "emergency"
 
-5. If user says they are done, don't need anything else, or want to pay ("no", "nothing", "that's all", "checkout", "buy now"):
+5. If user says they are done, don't need anything else, or want to pay ("no", "nothing", "that's all", "checkout", "buy now", "nahi", "bas", "kuch nahi", "ho gaya"):
    -> intent = "checkout"
 
 Otherwise:
    -> intent = "unknown"
 
+Also, detect the user's language. If they use any Hindi words or casual Indian slang, set language = "hinglish". Otherwise "english".
+
 For recommend:
 {
   "intent": "recommend",
-  "symptom": "extracted symptom"
+  "symptom": "extracted symptom",
+  "language": "hinglish" | "english"
 }
 
 For order:
 {
   "intent": "order",
   "medicine": "medicine name",
-  "quantity": number or null
+  "quantity": number or null,
+  "language": "hinglish" | "english"
 }
 """
 
@@ -76,7 +80,7 @@ def detect_intent(message: str):
     if any(word in message_lower for word in ["feel", "pain", "tired", "headache", "allergy", "skin"]):
         return {"intent": "recommend", "symptom": message}
         
-    if message_lower in ["no", "nothing", "that's all", "checkout", "buy now", "no thanks", "nope"]:
+    if message_lower in ["no", "nothing", "that's all", "checkout", "buy now", "no thanks", "nope", "nahi", "bas", "bas aur nahi", "kuch nahi", "ho gaya", "done"]:
         return {"intent": "checkout"}
 
     raw = completion.choices[0].message.content.strip()
@@ -85,7 +89,7 @@ def detect_intent(message: str):
         data = json.loads(raw)
 
         # Whitelist allowed keys
-        allowed_keys = {"intent", "symptom", "medicine", "quantity", "dosage_frequency"}
+        allowed_keys = {"intent", "symptom", "medicine", "quantity", "dosage_frequency", "language"}
 
         clean_data = {k: v for k, v in data.items() if k in allowed_keys}
 

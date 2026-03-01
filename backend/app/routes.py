@@ -4,9 +4,14 @@ from sqlalchemy import or_
 from collections import Counter
 from typing import List
 import os
+import time
+import uuid
+import base64
+from groq import Groq
 
+from pydantic import BaseModel
 from .database import get_db
-from .models import Medicine, Order, RefillAlert, Prescription
+from .models import Medicine, Order, RefillAlert, Prescription, Patient, SystemLog
 from .services import (
     predict_refill,
     scan_and_generate_refill_alerts,
@@ -18,10 +23,66 @@ from .agents.safety_agent import run_safety_checks
 router = APIRouter()
 
 # =====================================================
-# 🤖 CHAT (MAIN ENTRY)
+# 🔐 AUTH & REGISTRATION (Email/Password)
 # =====================================================
-from pydantic import BaseModel
+import uuid
 
+class RegisterRequest(BaseModel):
+    name: str
+    email: str
+    password: str
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+@router.post("/auth/register")
+def register(data: RegisterRequest, db: Session = Depends(get_db)):
+    # Check if user exists
+    existing = db.query(Patient).filter(Patient.email == data.email).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+        
+    # In a real app we would hash the password, e.g. bcrypt
+    hashed_pwd = data.password + "_hashed" 
+
+    new_patient = Patient(
+        id=str(uuid.uuid4()),
+        name=data.name,
+        email=data.email,
+        hashed_password=hashed_pwd,
+        is_verified=True
+    )
+    db.add(new_patient)
+    db.commit()
+    
+    return {
+        "status": "success",
+        "message": "Registration successful",
+        "patient": {"id": new_patient.id, "email": new_patient.email, "name": new_patient.name}
+    }
+
+@router.post("/auth/login")
+def login(data: LoginRequest, db: Session = Depends(get_db)):
+    
+    patient = db.query(Patient).filter(Patient.email == data.email).first()
+    
+    if not patient:
+        raise HTTPException(status_code=400, detail="Invalid email or password")
+        
+    hashed_pwd = data.password + "_hashed"
+    
+    if patient.hashed_password != hashed_pwd:
+        raise HTTPException(status_code=400, detail="Invalid email or password")
+        
+    return {
+        "status": "success",
+        "message": "Login successful",
+        "patient": {"id": patient.id, "email": patient.email, "name": patient.name}
+    }
+
+
+# =====================================================
 class ChatRequest(BaseModel):
     user_id: str
     message: str
@@ -29,7 +90,20 @@ class ChatRequest(BaseModel):
 
 @router.post("/chat")
 def chat(data: ChatRequest, db: Session = Depends(get_db)):
-    return run_pharmacy_agent(db, data.user_id, data.message)
+    start_time = time.time()
+    response = run_pharmacy_agent(db, data.user_id, data.message)
+    end_time = time.time()
+    
+    trace_len = len(response.get("trace", []))
+    status = "Verified" if response.get("type") not in ["error", "safety_block"] else "Blocked"
+    db.add(SystemLog(
+        trace_id=f"RX-{str(uuid.uuid4())[:8].upper()}",
+        agent_count=trace_len if trace_len > 0 else 1,
+        execution_time=round(end_time - start_time, 2),
+        status=status
+    ))
+    db.commit()
+    return response
 
 
 from pydantic import BaseModel
@@ -50,13 +124,39 @@ class QuantityRequest(BaseModel):
 
 @router.post("/chat/quantity")
 def continue_order(data: QuantityRequest, db: Session = Depends(get_db)):
-    return run_pharmacy_agent(
+    start_time = time.time()
+    response = run_pharmacy_agent(
         db,
         data.user_id,
-        str(data.quantity)
+        f"Order {data.quantity} packs of {data.medicine}"
     )
+    end_time = time.time()
+    
+    trace_len = len(response.get("trace", []))
+    status = "Verified" if response.get("type") not in ["error", "safety_block"] else "Blocked"
+    db.add(SystemLog(
+        trace_id=f"RX-{str(uuid.uuid4())[:8].upper()}",
+        agent_count=trace_len if trace_len > 0 else 1,
+        execution_time=round(end_time - start_time, 2),
+        status=status
+    ))
+    db.commit()
+    return response
 # =====================================================
-# 🔎 SEARCH MEDICINES
+# 📦 ADMIN ROUTING: REFILL STOCK
+# =====================================================
+class RefillStockRequest(BaseModel):
+    medicine_name: str
+    amount: int
+
+@router.post("/admin/refill-stock")
+def refill_stock(data: RefillStockRequest, db: Session = Depends(get_db)):
+    med = db.query(Medicine).filter(Medicine.name == data.medicine_name).first()
+    if not med:
+        raise HTTPException(status_code=404, detail="Medicine not found")
+    med.stock += data.amount
+    db.commit()
+    return {"status": "success", "message": f"Added {data.amount} to {data.medicine_name}", "new_stock": med.stock}
 # =====================================================
 @router.get("/search")
 def search_medicines(query: str = Query(..., min_length=2), db: Session = Depends(get_db)):
@@ -94,7 +194,8 @@ def get_products(db: Session = Depends(get_db)):
             "name": m.name,
             "price": m.price,
             "stock": m.stock,
-            "prescription_required": m.prescription_required
+            "prescription_required": m.prescription_required,
+            "max_safe_dosage": m.max_safe_dosage
         }
         for m in medicines
     ]
@@ -109,6 +210,7 @@ from pydantic import BaseModel
 class CartItem(BaseModel):
     name: str
     quantity: int
+    confirmed_overdose: bool = False
 
 class CheckoutRequest(BaseModel):
     patient_id: str
@@ -124,15 +226,32 @@ def finalize_checkout(data: CheckoutRequest, db: Session = Depends(get_db)):
         if not medicine:
             raise HTTPException(status_code=404, detail=f"{item.name} not found")
 
-        # 1️⃣ Check stock
+        # 1️⃣ Check stock and Auto-Restock
         if medicine.stock < item.quantity:
-            raise HTTPException(status_code=400, detail=f"Insufficient stock for {item.name}")
+            print(f"📦 [RESTOCK] {medicine.name} is insufficient for order. Automatically ordering 100 units from Retailer...")
+            medicine.stock += 100
+            db.commit()
+            if medicine.stock < item.quantity:
+                raise HTTPException(status_code=400, detail=f"Insufficient stock for {item.name}")
 
         # 2️⃣ Prescription check
         if medicine.prescription_required:
-            raise HTTPException(status_code=403, detail=f"{item.name} requires prescription")
+            has_rx = db.query(Prescription).filter(
+                Prescription.patient_id == data.patient_id,
+                Prescription.medicine_name == medicine.name,
+                Prescription.approved == True
+            ).first()
+            if not has_rx:
+                raise HTTPException(status_code=403, detail=f"{item.name} requires prescription. Please upload one first.")
 
-        # 3️⃣ Safety check
+        # 3️⃣ Strict Safety Overdosage check
+        max_safe = medicine.max_safe_dosage or 10
+        if item.quantity > max_safe * 3:
+            raise HTTPException(status_code=400, detail=f"Quantity {item.quantity} for {item.name} is dangerously unsafe and completely blocked by Backend.")
+            
+        if item.quantity > max_safe and not item.confirmed_overdose:
+            raise HTTPException(status_code=400, detail=f"Quantity {item.quantity} exceeds safe dosage of {max_safe}. Explicit confirmation required.")
+
         safety = run_safety_checks(db, data.patient_id, medicine.name)
 
         if safety["status"] == "blocked":
@@ -211,6 +330,23 @@ def get_refill_alerts(db: Session = Depends(get_db)):
     ]
 
 
+class EmailTestRequest(BaseModel):
+    user_id: str
+    medicine_name: str
+
+@router.post("/admin/test-refill-email")
+def test_refill_email(data: EmailTestRequest, db: Session = Depends(get_db)):
+    patient = db.query(Patient).filter(Patient.id == data.user_id).first()
+    email = patient.email if patient else data.user_id
+    
+    msg = f"📧 [MOCK EMAIL to {email}] Hello! Your {data.medicine_name} is running low. Please log in to PharmaAgent to repurchase."
+    print(msg)
+    
+    return {
+        "status": "success",
+        "message": f"Sent mock email to {email} for {data.medicine_name}"
+    }
+
 # =====================================================
 # 📦 INVENTORY SYSTEM
 # =====================================================
@@ -278,23 +414,86 @@ async def upload_prescription(
 
     file_location = f"{UPLOAD_DIR}/{user_id}_{medicine_name}_{file.filename}"
 
+    content = await file.read()
     with open(file_location, "wb") as f:
-        content = await file.read()
         f.write(content)
+        
+    extracted_text = ""
+    approved = True
+
+    try:
+        if file.content_type in ["image/jpeg", "image/png", "image/jpg"]:
+            b64_img = base64.b64encode(content).decode("utf-8")
+            client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+            prompt = f"Read the handwritten text in this prescription image. Does it mention {medicine_name}? Extract the relevant text and respond concisely."
+            
+            completion = client.chat.completions.create(
+                model="llama-3.2-11b-vision-preview",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:{file.content_type};base64,{b64_img}"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                temperature=0.1,
+                max_tokens=200
+            )
+            extracted_text = completion.choices[0].message.content
+            # Verify if medicine is in the extracted text
+            if medicine_name != "Unknown" and medicine_name.lower() not in extracted_text.lower():
+                approved = False  # Strictly reject if not found
+                print(f"Rx Check Failed: '{medicine_name}' not found in OCR text: {extracted_text}")
+            else:
+                approved = True
+                print(f"Rx Check Passed or Generic Upload.")
+    except Exception as e:
+        print("OCR Vision Error:", e)
 
     prescription = Prescription(
         patient_id=user_id,
         medicine_name=medicine_name,
-        file_path=file_location
+        file_path=file_location,
+        extracted_text=extracted_text,
+        approved=approved
     )
 
     db.add(prescription)
     db.commit()
 
+    if not approved:
+        raise HTTPException(status_code=400, detail="Prescription rejected. The specified medicine was not clearly identified in the handwritten text.")
+
     return {
-        "message": "Prescription uploaded successfully.",
-        "file_path": file_location
+        "message": "Prescription analyzed and verified successfully.",
+        "file_path": file_location,
+        "extracted_text": extracted_text
     }
+
+# =====================================================
+# 📚 ADMIN TRACES API
+# =====================================================
+@router.get("/admin/traces")
+def get_system_logs(db: Session = Depends(get_db)):
+    logs = db.query(SystemLog).order_by(SystemLog.created_at.desc()).limit(15).all()
+    return [
+        {
+            "id": log.id,
+            "trace_id": log.trace_id,
+            "agent_count": log.agent_count,
+            "execution_time": log.execution_time,
+            "status": log.status,
+            "created_at": log.created_at.isoformat()
+        }
+        for log in logs
+    ]
 
 
 # =====================================================

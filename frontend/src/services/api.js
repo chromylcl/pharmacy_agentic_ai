@@ -57,5 +57,23 @@ export const pharmacyService = {
 
   getRefillAlerts: async () => {
     return api.get("/admin/refill-alerts");
+  },
+
+  getTraces: async () => {
+    return api.get("/admin/traces");
+  },
+
+  refillStock: async (medicineName, amount) => {
+    return api.post("/admin/refill-stock", {
+      medicine_name: medicineName,
+      amount: amount
+    });
+  },
+
+  testRefillEmail: async (userId, medicineName) => {
+    return api.post("/admin/test-refill-email", {
+      user_id: userId,
+      medicine_name: medicineName
+    });
   }
 };

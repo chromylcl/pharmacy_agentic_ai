@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import pandas as pd
 from sqlalchemy import or_
-from .models import Medicine, Order, RefillAlert
+from .models import Medicine, Order, RefillAlert, Patient
 
 
 
@@ -171,14 +171,15 @@ def check_recent_purchase(db: Session, user_id: str, medicine_name: str):
 
     return False
 # =========================
-# AUTONOMOUS SCAN
+# AUTONOMOUS SCAN & SMS NOTIFICATIONS
 # =========================
 def scan_and_generate_refill_alerts(db: Session):
-    users = db.query(Order.patient_id).distinct().all()
-    users = [u[0] for u in users]
+    users_records = db.query(Order.patient_id).distinct().all()
+    users = [u[0] for u in users_records]
 
     generated = []
 
+    # 1. Dosage Cycle Alerts (Patient's supply is running low)
     for user in users:
         orders = db.query(Order).filter(Order.patient_id == user).all()
 
@@ -202,13 +203,42 @@ def scan_and_generate_refill_alerts(db: Session):
                         expected_run_out=run_out
                     )
                     db.add(alert)
+                    db.commit() # Commit to avoid duplicates across scans
+
+                    patient = db.query(Patient).filter(Patient.id == user).first()
+                    email = patient.email if patient else user
+
+                    # Trigger Mock EMAIL Alert
+                    print(f"📧 [MOCK EMAIL to {email}] Hello! Your {order.product_name} is running low based on your dosage cycle. Please repurchase soon.")
 
                     generated.append({
                         "patient_id": user,
-                        "medicine": order.product_name
+                        "medicine": order.product_name,
+                        "type": "dosage_refill"
                     })
 
-    db.commit()
+    # 2. Store Low Stock Alerts for Previous Buyers
+    low_stock_meds = db.query(Medicine).filter(Medicine.stock <= 10).all()
+    for med in low_stock_meds:
+        # find users who bought this medicine
+        buyers_records = db.query(Order.patient_id).filter(Order.product_name == med.name).distinct().all()
+        buyers = [b[0] for b in buyers_records]
+        
+        for buyer_id in buyers:
+            patient = db.query(Patient).filter(Patient.id == buyer_id).first()
+            email = patient.email if patient else buyer_id
+            # Check if we already alerted them recently (Mocked by just printing)
+            print(f"📧 [MOCK EMAIL to {email}] Notification: A previously purchased medicine ({med.name}) is running low in our store inventory. Order now to secure your refill.")
+            generated.append({
+                "patient_id": buyer_id,
+                "medicine": med.name,
+                "type": "store_low_stock"
+            })
+            
+    # Also trigger admin alert
+    for med in low_stock_meds:
+        print(f"⚠️ [ADMIN ALERT] Low stock detected for {med.name} (Qty: {med.stock})")
+
     return generated
 
 from sqlalchemy import or_

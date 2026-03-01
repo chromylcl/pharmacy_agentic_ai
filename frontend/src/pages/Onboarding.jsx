@@ -1,109 +1,220 @@
-import { useState } from 'react';
-import { usePharmacy } from '../context/PharmacyContext';
-import { ShieldCheck, User, Calendar, Baby, HeartPulse, CheckCircle2 } from 'lucide-react';
+import React, { useState } from "react";
+import { usePharmacy } from "../context/PharmacyContext";
+import { Stethoscope, LogIn, UserPlus } from "lucide-react";
+import axios from "axios";
 
-const Onboarding = () => {
-  const { setPatient, setIsAuth } = usePharmacy();
-  const [formData, setFormData] = useState({ firstName: '', lastName: '', age: '', terms: false });
+export default function Onboarding() {
+  const { handleLogin } = usePharmacy();
+  const [isLoginMode, setIsLoginMode] = useState(true);
 
-  // Dynamic calculations for the safety banners
-  const ageNum = parseInt(formData.age);
-  const isPediatric = ageNum > 0 && ageNum < 18;
-  const isSenior = ageNum >= 65;
-  const isReady = formData.firstName && formData.lastName && formData.age && formData.terms;
+  // Form states
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    age: "",
+    email: "",
+    password: "",
+  });
 
-  const handleSubmit = (e) => {
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
+
+  const glassBase = "backdrop-blur-[40px] saturate-[200%] bg-white/40 border border-white/60 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.1)]";
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setErrorMsg(null);
+  };
+
+  const handleAuthSubmit = async (e) => {
     e.preventDefault();
-    if (isReady) {
-      const mode = isPediatric ? 'pediatric' : isSenior ? 'senior' : 'standard';
-      
-      // Save patient to the global context
-      setPatient({ 
-        name: `${formData.firstName.trim()} ${formData.lastName.trim()}`, 
-        age: ageNum, 
-        mode 
-      });
-      // Unlock the app
-      setIsAuth(true);
+    setErrorMsg(null);
+    setLoading(true);
+
+    try {
+      if (isLoginMode) {
+        if (!formData.email || !formData.password) {
+          setErrorMsg("Please fill in both email and password.");
+          setLoading(false);
+          return;
+        }
+
+        const res = await axios.post("http://localhost:8000/auth/login", {
+          email: formData.email,
+          password: formData.password,
+        });
+
+        if (res.data.status === "success") {
+          handleLogin(res.data.patient);
+        }
+      } else {
+        if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
+          setErrorMsg("Please fill out all required fields.");
+          setLoading(false);
+          return;
+        }
+        if (!acceptedTerms) {
+          setErrorMsg("You must accept the terms and medical constraints.");
+          setLoading(false);
+          return;
+        }
+
+        const res = await axios.post("http://localhost:8000/auth/register", {
+          name: `${formData.firstName} ${formData.lastName}`,
+          email: formData.email,
+          password: formData.password,
+        });
+
+        if (res.data.status === "success") {
+          handleLogin(res.data.patient);
+        }
+      }
+    } catch (error) {
+      console.error("Auth Error:", error);
+      setErrorMsg(error.response?.data?.detail || "Authentication Failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
+
   return (
-    <div className="glass-panel max-w-lg w-full p-8 md:p-10 shadow-2xl animate-in fade-in zoom-in-95 duration-500">
-      <div className="flex flex-col items-center text-center mb-8">
-        <div className="h-16 w-16 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-200 mb-6 transition-transform hover:scale-105">
-          <ShieldCheck size={32} className="text-white" />
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      {/* Background gradients */}
+      <div className="absolute top-0 right-0 w-1/3 h-screen bg-gradient-to-l from-blue-100/50 to-transparent pointer-events-none" />
+      <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-blue-50 to-transparent pointer-events-none" />
+
+      <div className={`w-full max-w-xl ${glassBase} rounded-[2rem] p-8 md:p-12 relative z-10 animate-fade-in-up`}>
+
+        {/* Header */}
+        <div className="text-center mb-10">
+          <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-blue-500/30">
+            <Stethoscope className="text-white" size={32} />
+          </div>
+          <h1 className="text-3xl font-bold text-slate-800 mb-2">Welcome to SecureHealth</h1>
+          <p className="text-slate-500">
+            Intelligent Agentic Pharmacy System
+          </p>
         </div>
-        <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">Patient Intake</h1>
-        <p className="text-slate-500 mt-2 font-medium">Secure AI Pharmacy Registration</p>
+
+        {/* Toggle Login/Signup */}
+        <div className="flex bg-white/20 backdrop-blur-md rounded-2xl p-1.5 mb-8 border border-white/40 shadow-inner">
+          <button
+            type="button"
+            onClick={() => setIsLoginMode(true)}
+            className={`flex-1 py-2.5 text-sm font-bold rounded-xl transition-all ${isLoginMode ? 'bg-white/80 text-blue-600 shadow-[0_4px_12px_rgba(0,0,0,0.05)]' : 'text-slate-500 hover:text-slate-700 hover:bg-white/40'}`}
+          >
+            Login
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsLoginMode(false)}
+            className={`flex-1 py-2.5 text-sm font-bold rounded-xl transition-all ${!isLoginMode ? 'bg-white/80 text-blue-600 shadow-[0_4px_12px_rgba(0,0,0,0.05)]' : 'text-slate-500 hover:text-slate-700 hover:bg-white/40'}`}
+          >
+            Sign Up
+          </button>
+        </div>
+
+        <form onSubmit={handleAuthSubmit} className="space-y-6">
+
+          {!isLoginMode && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">First Name</label>
+                <input
+                  type="text"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleChange}
+                  className="w-full bg-white/40 backdrop-blur-md border border-white/60 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white/60 transition-all font-medium text-slate-800 placeholder-slate-400 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                  placeholder="John"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">Last Name</label>
+                <input
+                  type="text"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  className="w-full bg-white/40 backdrop-blur-md border border-white/60 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white/60 transition-all font-medium text-slate-800 placeholder-slate-400 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                  placeholder="Doe"
+                />
+              </div>
+              <div className="space-y-2 col-span-2">
+                <label className="text-sm font-medium text-slate-700">Age (Optional for Sign up)</label>
+                <input
+                  type="number"
+                  name="age"
+                  value={formData.age}
+                  onChange={handleChange}
+                  className="w-full bg-white/40 backdrop-blur-md border border-white/60 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white/60 transition-all font-medium text-slate-800 placeholder-slate-400 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+                  placeholder="30"
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700">Email Address</label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              className="w-full bg-white/40 backdrop-blur-md border border-white/60 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white/60 transition-all font-medium text-slate-800 placeholder-slate-400 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+              placeholder="john@example.com"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700">Password</label>
+            <input
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              className="w-full bg-white/40 backdrop-blur-md border border-white/60 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white/60 transition-all font-medium text-slate-800 placeholder-slate-400 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]"
+              placeholder="••••••••"
+            />
+          </div>
+
+          {!isLoginMode && (
+            <div className="flex items-start gap-3 p-4 bg-white/30 backdrop-blur-sm rounded-xl border border-white/60 shadow-sm">
+              <input
+                type="checkbox"
+                id="terms"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                className="mt-1 w-4 h-4 text-blue-600 rounded border-white/60 border-2 focus:ring-blue-500/50 bg-white/50"
+              />
+              <label htmlFor="terms" className="text-sm text-slate-600 leading-relaxed font-medium">
+                I agree to the <span className="font-bold text-slate-800">Medical Safety Constraints</span> and acknowledge that this system enforces strict dosage limits and prescription requirements.
+              </label>
+            </div>
+          )}
+
+          {errorMsg && (
+            <div className="p-4 bg-red-50 text-red-600 border border-red-100 rounded-xl text-sm font-medium">
+              {errorMsg}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 rounded-xl transition-all shadow-lg shadow-blue-600/30 active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2"
+          >
+            {loading ? "Processing..." : isLoginMode ? (
+              <><LogIn size={20} /> Login Securely</>
+            ) : (
+              <><UserPlus size={20} /> Create Account</>
+            )}
+          </button>
+        </form>
+
       </div>
-
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="relative group">
-            <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
-            <input 
-              type="text" required placeholder="First Name" 
-              className="w-full bg-white/60 border border-white/50 pl-11 pr-4 py-3 rounded-xl text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 ring-emerald-400/50 shadow-sm transition-all"
-              onChange={(e) => setFormData({...formData, firstName: e.target.value})}
-            />
-          </div>
-          <div className="relative group">
-            <input 
-              type="text" required placeholder="Last Name" 
-              className="w-full bg-white/60 border border-white/50 px-4 py-3 rounded-xl text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 ring-emerald-400/50 shadow-sm transition-all"
-              onChange={(e) => setFormData({...formData, lastName: e.target.value})}
-            />
-          </div>
-        </div>
-
-        <div className="relative group">
-          <Calendar size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
-          <input 
-            type="number" required placeholder="Age" min="1" max="120"
-            className="w-full bg-white/60 border border-white/50 pl-11 pr-4 py-3 rounded-xl text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 ring-emerald-400/50 shadow-sm transition-all"
-            onChange={(e) => setFormData({...formData, age: e.target.value})}
-          />
-        </div>
-
-        {/* Dynamic Safety Banners */}
-        <div className="min-h-[50px] transition-all duration-300">
-          {isPediatric && (
-            <div className="flex items-center gap-3 p-3 bg-blue-50/80 backdrop-blur-sm border border-blue-200 text-blue-700 rounded-xl text-sm font-semibold animate-in slide-in-from-top-2">
-              <Baby size={20} className="text-blue-500" /> Pediatric Mode: Guardian supervision verified.
-            </div>
-          )}
-          {isSenior && (
-            <div className="flex items-center gap-3 p-3 bg-amber-50/80 backdrop-blur-sm border border-amber-200 text-amber-700 rounded-xl text-sm font-semibold animate-in slide-in-from-top-2">
-              <HeartPulse size={20} className="text-amber-500" /> Senior Mode: Contraindication alerts boosted.
-            </div>
-          )}
-        </div>
-
-        <label className="flex items-start gap-3 cursor-pointer p-2 rounded-lg hover:bg-white/40 transition-colors">
-          <div className="relative flex items-center mt-0.5">
-            <input 
-              type="checkbox" required
-              className="peer w-5 h-5 appearance-none border-2 border-slate-300 rounded bg-white/50 checked:bg-emerald-500 checked:border-emerald-500 transition-all cursor-pointer"
-              onChange={(e) => setFormData({...formData, terms: e.target.checked})} 
-            />
-            <CheckCircle2 size={16} className="absolute inset-0 m-auto text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={3} />
-          </div>
-          <span className="text-sm text-slate-600 leading-snug font-medium">
-            I acknowledge the <span className="text-emerald-600 hover:underline">Terms of Service</span> and consent to AI-assisted medical triage.
-          </span>
-        </label>
-
-        <button 
-          type="submit" 
-          disabled={!isReady}
-          className="w-full mt-4 bg-emerald-500 hover:bg-emerald-600 text-white p-4 rounded-xl font-bold text-lg shadow-xl shadow-emerald-500/20 transition-all disabled:opacity-50 disabled:hover:bg-emerald-500 disabled:cursor-not-allowed active:scale-[0.98]"
-        >
-          Initialize Session
-        </button>
-      </form>
-    </div>
+    </div >
   );
-};
-
-export default Onboarding;
+}

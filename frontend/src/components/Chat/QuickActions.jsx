@@ -3,10 +3,8 @@ import { ShoppingBag, Pill, Search, FileText, ChevronRight } from 'lucide-react'
 
 const QuickActions = ({ onAction }) => {
   const actions = [
-    { label: 'Browse Store', icon: <ShoppingBag />, color: 'text-emerald-500', prompt: 'I want to see the medicine catalog.' },
-    { label: 'Refill Check', icon: <Pill />, color: 'text-blue-500', prompt: 'Do I have any pending refills?' },
-    { label: 'Consult AI', icon: <Search />, color: 'text-purple-500', prompt: 'I need medical advice for my symptoms.' },
-    { label: 'Upload RX', icon: <FileText />, color: 'text-amber-500', prompt: 'TRIGGER_RX_UPLOAD' }
+    { label: 'Browse Store', icon: <ShoppingBag />, color: 'text-emerald-500', prompt: 'TRIGGER_GO_TO_STORE' },
+    { label: 'Consult AI', icon: <Search />, color: 'text-purple-500', prompt: 'I need medical advice for my symptoms.' }
   ];
 
   return (

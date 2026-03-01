@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import app.main
+  File "C:\Hackathon\pharmacy_agentic_ai\backend\app\main.py", line 5, in <module>
+    from .routes import router as main_router
+  File "C:\Hackathon\pharmacy_agentic_ai\backend\app\routes.py", line 15, in <module>
+    from .agents.orchestrator import run_pharmacy_agent
+  File "C:\Hackathon\pharmacy_agentic_ai\backend\app\agents\orchestrator.py", line 1, in <module>
+    from .intent_agent import detect_intent
+  File "C:\Hackathon\pharmacy_agentic_ai\backend\app\agents\intent_agent.py", line 8, in <module>
+    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+  File "C:\Users\athar\AppData\Local\Programs\Python\Python314\Lib\site-packages\groq\_client.py", line 79, in __init__
+    raise GroqError(
+        "The api_key client option must be set either by passing api_key to the client or by setting the GROQ_API_KEY environment variable"
+    )
+groq.GroqError: The api_key client option must be set either by passing api_key to the client or by setting the GROQ_API_KEY environment variable

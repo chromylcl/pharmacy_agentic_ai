@@ -54,6 +54,7 @@ class Prescription(Base):
     file_path = Column(String)
     uploaded_at = Column(DateTime, default=datetime.utcnow)
     approved = Column(Boolean, default=True)  # mock approval for hackathon
+    extracted_text = Column(String, nullable=True)
 
 
 class PendingOrder(Base):
@@ -67,8 +68,19 @@ class PendingOrder(Base):
 class Patient(Base):
     __tablename__ = "patients"
 
-    id = Column(String, primary_key=True, index=True) # Typically UUID or phone number string
+    id = Column(String, primary_key=True, index=True) # Typically UUID or email
     name = Column(String)
-    phone_number = Column(String, unique=True, index=True)
+    email = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
     is_verified = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class SystemLog(Base):
+    __tablename__ = "system_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    trace_id = Column(String)
+    agent_count = Column(Integer)
+    execution_time = Column(Float)
+    status = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)

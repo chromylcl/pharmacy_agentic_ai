@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { usePharmacy } from '../../context/PharmacyContext';
-import { Pill, ShoppingBag, RotateCcw, ShoppingCart } from 'lucide-react';
+import { Pill, ShoppingBag, RotateCcw, ShoppingCart, User } from 'lucide-react';
 
 const Navbar = ({ activeTab, setActiveTab }) => {
   const { setMessages, setAgentStatus, cart, setIsBillingOpen } = usePharmacy();
@@ -18,7 +18,7 @@ const Navbar = ({ activeTab, setActiveTab }) => {
       <div className="w-full flex justify-center pt-6 px-4 z-50 sticky top-0 animate-in slide-in-from-top-4 duration-700">
         {/* PREMIUM LIQUID GLASS PILL */}
         <nav className="w-full max-w-5xl px-5 py-3 flex items-center justify-between rounded-full bg-white/20 backdrop-blur-[32px] saturate-[150%] border border-white/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_10px_30px_-10px_rgba(0,0,0,0.1)]">
-          
+
           {/* Brand */}
           <div className="flex items-center gap-3">
             <div className="bg-emerald-500/15 p-2 rounded-full border border-emerald-500/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
@@ -31,15 +31,14 @@ const Navbar = ({ activeTab, setActiveTab }) => {
 
           {/* Desktop Tabs */}
           <div className="hidden md:flex items-center gap-2 px-4 py-1.5 bg-white/30 rounded-full border border-white/40 shadow-inner">
-            {['chat', 'store', 'admin'].map((tab) => (
+            {['chat', 'store', 'profile', 'admin'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-5 py-1.5 rounded-full text-sm font-bold capitalize transition-all duration-300 ${
-                  activeTab === tab 
-                  ? 'bg-white text-emerald-600 shadow-sm border border-white/60 scale-105' 
+                className={`px-5 py-1.5 rounded-full text-sm font-bold capitalize transition-all duration-300 ${activeTab === tab
+                  ? 'bg-white text-emerald-600 shadow-sm border border-white/60 scale-105'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
-                }`}
+                  }`}
               >
                 {tab}
               </button>
@@ -48,17 +47,25 @@ const Navbar = ({ activeTab, setActiveTab }) => {
 
           {/* Actions */}
           <div className="flex items-center gap-2">
-            <button 
+            <button
               onClick={() => setActiveTab('store')}
               className={`md:hidden p-2 rounded-full transition-all ${activeTab === 'store' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-600 hover:bg-white/40'}`}
+              title="Store"
             >
               <ShoppingBag size={18} />
             </button>
-            
+            <button
+              onClick={() => setActiveTab('profile')}
+              className={`md:hidden p-2 rounded-full transition-all ${activeTab === 'profile' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-600 hover:bg-white/40'}`}
+              title="Profile"
+            >
+              <User size={18} />
+            </button>
+
             <div className="h-6 w-px bg-slate-300/50 mx-1"></div>
 
             {/* Cart Button */}
-            <button 
+            <button
               onClick={() => setIsBillingOpen(true)}
               className="relative p-2 text-slate-600 hover:text-emerald-600 hover:bg-white/40 rounded-full transition-all"
             >
@@ -69,8 +76,8 @@ const Navbar = ({ activeTab, setActiveTab }) => {
                 </span>
               )}
             </button>
-            
-            <button 
+
+            <button
               onClick={handleReset}
               className="p-2 text-slate-500 hover:text-amber-500 hover:bg-white/40 rounded-full transition-colors"
               title="Reset Session"

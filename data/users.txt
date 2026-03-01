@@ -1,0 +1,41 @@
+--- PHARMACY USER ACCOUNTS ---
+
+Patient Name                   | Email                          | Password
+--------------------------------------------------------------------------------
+Patient Demographics and Purchase Data | patient.demographics@example.com | L5ldFZjY
+Patient ID                     | patient.id@example.com         | A4psF1Tn
+PAT001                         | pat@example.com                | YSc4PFWL
+PAT002                         | pat1@example.com               | PvCW2aIR
+PAT003                         | pat2@example.com               | jqLm1Dl1
+PAT004                         | pat3@example.com               | RZrqx2dr
+PAT005                         | pat4@example.com               | GUsiXdaO
+PAT006                         | pat5@example.com               | mkYttb66
+PAT007                         | pat6@example.com               | PisJrejt
+PAT008                         | pat7@example.com               | cTB3856h
+PAT009                         | pat8@example.com               | oKNADjTg
+PAT010                         | pat9@example.com               | h8pXmKqW
+PAT011                         | pat10@example.com              | GT2iD0Yl
+PAT012                         | pat11@example.com              | fzgFSasT
+PAT013                         | pat12@example.com              | lNTKL1DZ
+PAT014                         | pat13@example.com              | kWqsCkNe
+PAT015                         | pat14@example.com              | WSuvjllA
+PAT016                         | pat15@example.com              | b86xcwr1
+PAT017                         | pat16@example.com              | V8aYEvZk
+PAT018                         | pat17@example.com              | lO4BUyy2
+PAT019                         | pat18@example.com              | 3Jkd4bPu
+PAT020                         | pat19@example.com              | nntSDSOm
+PAT021                         | pat20@example.com              | tF7mXB80
+PAT022                         | pat21@example.com              | TJR3ZuLB
+PAT023                         | pat22@example.com              | IVWQNnDw
+PAT024                         | pat23@example.com              | YQqrUIrb
+PAT025                         | pat24@example.com              | vixBAwc5
+PAT026                         | pat25@example.com              | ZJpLLxDE
+PAT027                         | pat26@example.com              | Wdb7bMoN
+PAT028                         | pat27@example.com              | 7uCrG0ij
+PAT029                         | pat28@example.com              | pnc5zRxz
+PAT030                         | pat29@example.com              | B3we4vhH
+PAT031                         | pat30@example.com              | PPgmlo41
+PAT032                         | pat31@example.com              | Ie1du85J
+PAT033                         | pat32@example.com              | IYSniNk7
+PAT034                         | pat33@example.com              | eSg0na8q
+PAT035                         | pat34@example.com              | KvUehcnm

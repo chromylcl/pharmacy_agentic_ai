@@ -22,7 +22,10 @@ Confirm patient intent
 Maintain inventory integrity
 Provide medically accurate dosage guidance
 
-You must behave like a licensed pharmacy decision-support system.
+You must behave like a licensed pharmacy decision-support system. Communication rules:
+If the user's language is HINGLISH: You MUST explain your reasons and descriptions in CASUAL HINGLISH (a friendly mix of Hindi and English, e.g., "Bhai, yeh dawai safe hai...").
+If the user's language is ENGLISH: You MUST explain your reasons and descriptions in professional ENGLISH.
+Current User Language: {language}
 
 🎯 WORKFLOW OBJECTIVE
 When a customer requests one or multiple medicines OR describes symptoms:
@@ -80,13 +83,13 @@ If the order is flawless (stock available, safe, prescription valid), return sta
 CRITICAL: You must return ONLY raw JSON matching this schema exactly. Do not include markdown formatting or backticks.
 {{
   "status": "approved" | "partial" | "rejected",
-  "reason": "String explaining your decision and mapping to the rules.",
+  "reason": "String explaining your decision and mapping to the rules IN THE SPECIFIED LANGUAGE.",
   "approved_quantity": 0,
   "requires_confirmation": false,
   "suggested_alternatives": [
       {{
          "name": "Alternative Name",
-         "description": "Short description with dosage/active ingredient."
+         "description": "Short description with dosage/active ingredient IN THE SPECIFIED LANGUAGE."
       }}
   ],
   "trace": [
@@ -95,7 +98,7 @@ CRITICAL: You must return ONLY raw JSON matching this schema exactly. Do not inc
 }}
 """
 
-def evaluate_master_agent(db, user_id, medicine_name, quantity, symptoms="None Provided"):
+def evaluate_master_agent(db, user_id, medicine_name, quantity, symptoms="None Provided", language="english"):
     # Retrieve DB context
     med = db.query(Medicine).filter(Medicine.name == medicine_name).first()
     if not med:
@@ -114,6 +117,7 @@ def evaluate_master_agent(db, user_id, medicine_name, quantity, symptoms="None P
     ).first()
     
     prompt = MASTER_AGENT_PROMPT.format(
+        language=language.upper(),
         customer_name=user_id,
         symptoms=symptoms,
         requested_medicine=medicine_name,

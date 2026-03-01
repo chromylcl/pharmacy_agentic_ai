@@ -18,7 +18,10 @@ const PrescriptionUpload = ({ isOpen, onClose, onUploadComplete, medicineName })
 
   const validateAndSetFile = (selectedFile) => {
     const validTypes = ['application/pdf', 'image/jpeg', 'image/png'];
-    if (selectedFile && validTypes.includes(selectedFile.type)) {
+    const validExtensions = ['.pdf', '.jpg', '.jpeg', '.png'];
+    const isExtensionValid = validExtensions.some(ext => selectedFile?.name?.toLowerCase().endsWith(ext));
+
+    if (selectedFile && (validTypes.includes(selectedFile.type) || isExtensionValid)) {
       setFile(selectedFile);
       setUploadState('idle');
     } else {
@@ -46,13 +49,13 @@ const PrescriptionUpload = ({ isOpen, onClose, onUploadComplete, medicineName })
   const uploadToBackend = async () => {
     if (!file) return;
     setUploadState('uploading');
-    
+
     try {
       // we need user and medicine passing in. We'll extract them from context or assume dummy for demo 
       // if not explicitly passed down from UserChat.
       const userId = localStorage.getItem('pharmacy_patient_name') || 'Jane Doe';
       const medName = medicineName || 'Unknown';
-      
+
       const formData = new FormData();
       formData.append('file', file);
 
@@ -80,9 +83,9 @@ const PrescriptionUpload = ({ isOpen, onClose, onUploadComplete, medicineName })
 
   return (
     <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="glass-panel w-full max-w-md p-8 relative shadow-2xl animate-in zoom-in-95 duration-300 bg-white/70">
-        
-        <button 
+      <div className="w-full max-w-md p-8 relative rounded-[2.5rem] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.1)] bg-white/40 backdrop-blur-[40px] saturate-[200%] border border-white/60 animate-in zoom-in-95 duration-300">
+
+        <button
           onClick={onClose}
           className="absolute top-4 right-4 p-2 bg-white/50 hover:bg-white rounded-full text-slate-500 transition-colors"
         >
@@ -104,15 +107,14 @@ const PrescriptionUpload = ({ isOpen, onClose, onUploadComplete, medicineName })
           </div>
         ) : (
           <>
-            <form 
+            <form
               onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}
               onClick={() => inputRef.current.click()}
-              className={`relative flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-3xl cursor-pointer transition-all duration-300 group ${
-                dragActive ? 'border-emerald-500 bg-emerald-50/50' : 'border-slate-300 hover:border-emerald-400 bg-white/30 hover:bg-white/50'
-              }`}
+              className={`relative flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-3xl cursor-pointer transition-all duration-300 group ${dragActive ? 'border-emerald-500 bg-emerald-50/50' : 'border-slate-300 hover:border-emerald-400 bg-white/30 hover:bg-white/50'
+                }`}
             >
               <input ref={inputRef} type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={handleChange} className="hidden" />
-              
+
               <div className="p-4 bg-white shadow-sm rounded-full mb-3 group-hover:scale-110 group-hover:shadow-md transition-all">
                 <UploadCloud size={32} className={dragActive ? 'text-emerald-500' : 'text-slate-400 group-hover:text-emerald-500'} />
               </div>
@@ -136,7 +138,7 @@ const PrescriptionUpload = ({ isOpen, onClose, onUploadComplete, medicineName })
                   </div>
                   <span className="text-sm font-semibold text-slate-700 truncate">{file.name}</span>
                 </div>
-                <button 
+                <button
                   onClick={(e) => { e.stopPropagation(); setFile(null); }}
                   className="p-1.5 text-slate-400 hover:text-rose-500 rounded-md transition-colors"
                 >
@@ -145,15 +147,15 @@ const PrescriptionUpload = ({ isOpen, onClose, onUploadComplete, medicineName })
               </div>
             )}
 
-            <button 
+            <button
               onClick={uploadToBackend}
               disabled={!file || uploadState === 'uploading'}
-              className="w-full mt-6 bg-slate-800 hover:bg-slate-700 disabled:bg-slate-300 text-white p-4 rounded-2xl font-bold text-[15px] shadow-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+              className="w-full mt-6 bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300/50 text-white p-4 rounded-2xl font-black text-[15px] shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
             >
               {uploadState === 'uploading' ? (
-                <><Loader2 size={18} className="animate-spin" /> Processing File...</>
+                <><Loader2 size={18} className="animate-spin" /> Analyzing Document...</>
               ) : (
-                'Secure Upload'
+                'Secure Upload & Verify'
               )}
             </button>
           </>
